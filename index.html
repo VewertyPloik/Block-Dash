@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Block Dash</title>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%;
+    background: #000;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #levelSelect {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin: 12px 0 6px 0;
+    width: 100%;
+    max-width: 600px;
+  }
+  .levelBtn {
+    flex: 1 1 120px;
+    padding: 10px 0;
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    background: #50e3c2;
+    color: #222;
+    position: relative;
+    font-size: 1rem;
+    transition: background 0.3s;
+    text-align: center;
+  }
+  .levelBtn.selected {
+    background: #0b796e;
+    color: #fff;
+  }
+  .levelBtn .checkmark {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 20px;
+    color: greenyellow;
+  }
+  #progressPercent {
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.4rem;
+    margin: 6px 0 0 0;
+    user-select: none;
+    text-shadow: 1px 1px 6px #000a;
+    min-height: 30px;
+  }
+  #message {
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin: 4px 0 10px 0;
+    user-select: none;
+    text-shadow: 1px 1px 4px #000a;
+    max-width: 600px;
+  }
+  #gameCanvas {
+    border-radius: 15px;
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 4 / 1; /* 600x150 */
+    background: #004ea8;
+    touch-action: manipulation;
+    display: block;
+  }
+  #controls {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 600px;
+  }
+  button#playBtn, button#resetBtn {
+    flex: 1;
+    padding: 14px 0;
+    border-radius: 12px;
+    border: none;
+    background: #50e3c2;
+    color: #222;
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.3s;
+  }
+  button#resetBtn {
+    display: none;
+  }
+  button#playBtn:active,
+  button#resetBtn:active,
+  .levelBtn:active {
+    background: #38c7a6;
+  }
+
+  /* Level Creator styles */
+  #creator {
+    margin-top: 20px;
+    max-width: 600px;
+    width: 100%;
+    background: #111;
+    border-radius: 12px;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  #creator h2 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    color: #50e3c2;
+  }
+  #creatorControls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  #creatorControls label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9rem;
+    user-select: none;
+    color: #ccc;
+  }
+  #creatorControls input[type="number"],
+  #creatorControls select {
+    margin-top: 4px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: none;
+    font-size: 1rem;
+  }
+  #spikeList {
+    max-height: 120px;
+    overflow-y: auto;
+    background: #222;
+    padding: 8px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    color: #eee;
+  }
+  #spikeList div {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 6px;
+    border-bottom: 1px solid #444;
+    font-size: 0.9rem;
+  }
+  #spikeList div:last-child {
+    border-bottom: none;
+  }
+  #spikeList button {
+    background: transparent;
+    border: none;
+    color: #f44;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1rem;
+  }
+  #creatorButtons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  #creatorButtons button {
+    padding: 10px 14px;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #50e3c2;
+    color: #222;
+    transition: background 0.3s;
+  }
+  #creatorButtons button:active {
+    background: #38c7a6;
+  }
+  #customLevelName {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    border: none;
+    box-sizing: border-box;
+    color: #222;
+    font-weight: bold;
+  }
+  #customSpeedInput, #customLengthInput {
+    width: 90px;
+  }
+  #creatorMessage {
+    text-align: center;
+    min-height: 24px;
+    margin-top: 10px;
+    color: #50e3c2;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<div id="levelSelect"></div>
+
+<div id="progressPercent">0% Completed</div>
+<div id="message">Tap or click the canvas to jump. Avoid the spikes!</div>
+<canvas id="gameCanvas" aria-label="Game canvas"></canvas>
+
+<div id="controls">
+  <button id="playBtn">Play</button>
+  <button id="resetBtn">Reset</button>
+</div>
+
+<!-- Level Creator UI -->
+<div id="creator">
+  <h2>Create Your Own Level</h2>
+  <input type="text" id="customLevelName" placeholder="Level Name (max 20 chars)" maxlength="20" />
+  <div id="creatorControls">
+    <label>
+      Speed (1-15)
+      <input type="number" id="customSpeedInput" min="1" max="15" value="5" />
+    </label>
+    <label>
+      Length (seconds, 10-60)
+      <input type="number" id="customLengthInput" min="10" max="60" value="20" />
+    </label>
+    <label>
+      Spike Type
+      <select id="customSpikeType">
+        <option value="single">Single</option>
+        <option value="double">Double</option>
+        <option value="triple">Triple</option>
+      </select>
+    </label>
+    <label>
+      Spike Time (seconds)
+      <input type="number" id="customSpikeTime" min="0" max="59" step="0.1" value="1.5" />
+    </label>
+  </div>
+  <div style="text-align:center;">
+    <button id="addSpikeBtn">Add Spike</button>
+  </div>
+  <div id="spikeList" aria-label="List of spikes in custom level"></div>
+  <div id="creatorButtons">
+    <button id="saveLevelBtn">Save Level</button>
+    <button id="loadLevelBtn">Load Level</button>
+    <button id="deleteLevelBtn">Delete Saved Level</button>
+    <button id="playCustomBtn">Play Custom Level</button>
+  </div>
+  <div id="creatorMessage" aria-live="polite"></div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const messageEl = document.getElementById('message');
+  const progressEl = document.getElementById('progressPercent');
+  const playBtn = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const levelSelectDiv = document.getElementById('levelSelect');
+
+  // Creator elements
+  const creator = document.getElementById('creator');
+  const customLevelName = document.getElementById('customLevelName');
+  const customSpeedInput = document.getElementById('customSpeedInput');
+  const customLengthInput = document.getElementById('customLengthInput');
+  const customSpikeType = document.getElementById('customSpikeType');
+  const customSpikeTime = document.getElementById('customSpikeTime');
+  const addSpikeBtn = document.getElementById('addSpikeBtn');
+  const spikeList = document.getElementById('spikeList');
+  const saveLevelBtn = document.getElementById('saveLevelBtn');
+  const loadLevelBtn = document.getElementById('loadLevelBtn');
+  const deleteLevelBtn = document.getElementById('deleteLevelBtn');
+  const playCustomBtn = document.getElementById('playCustomBtn');
+  const creatorMessage = document.getElementById('creatorMessage');
+
+  function resizeCanvas() {
+    const maxWidth = 600;
+    const width = Math.min(window.innerWidth - 20, maxWidth);
+    canvas.width = width;
+    canvas.height = width / 4;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  const spikeWidth = 20;
+  const spikeHeight = 23;
+  let groundY = 0; // will init after canvas resize
+
+  // Default levels unchanged
+  const levels = [
+    { name: 'Numero Uno', speed: 3, lengthSec: 20, bgColor: '#004ea8', allowTriple: false, spikeCounts: {single: 15, double: 5, triple: 0} },
+    { name: 'Dive', speed: 5, lengthSec: 20, bgColor: '#267f24', allowTriple: true, spikeCounts: {single: 8, double: 4, triple: 3} },
+    { name: 'Turbo Rush', speed: 6, lengthSec: 22, bgColor: '#a52a2a', allowTriple: true, spikeCounts: {single: 10, double: 6, triple: 4} },
+    { name: 'Spike Frenzy', speed: 7, lengthSec: 22, bgColor: '#660066', allowTriple: true, spikeCounts: {single: 12, double: 8, triple: 5} },
+    { name: 'Quickstep', speed: 8, lengthSec: 23, bgColor: '#4b0082', allowTriple: true, spikeCounts: {single: 10, double: 10, triple: 6} },
+    { name: 'Speed Surge', speed: 9, lengthSec: 23, bgColor: '#ff8c00', allowTriple: true, spikeCounts: {single: 9, double: 11, triple: 7} },
+    { name: 'Rapid Blaze', speed: 10, lengthSec: 24, bgColor: '#b22222', allowTriple: true, spikeCounts: {single: 7, double: 12, triple: 8} },
+    { name: 'Final Flight', speed: 11, lengthSec: 25, bgColor: '#2e8b57', allowTriple: true, spikeCounts: {single: 6, double: 12, triple: 10} },
+  ];
+
+  const storageKey = 'gd_8level_progress';
+  const customLevelStorageKey = 'gd_custom_level';
+  let completedLevels = JSON.parse(localStorage.getItem(storageKey) || '{}');
+
+  // Helper: Check spike spacing (180px min)
+  function isSpacingValid(spikes, newTime, newType, speed) {
+    const newX = newTime * speed * 60;
+    for (const spike of spikes) {
+      const existingX = spike.time * speed * 60;
+      let existingWidth = spike.type === 'triple' ? spikeWidth * 3 : (spike.type === 'double' ? spikeWidth * 2 : spikeWidth);
+      let newWidth = newType === 'triple' ? spikeWidth * 3 : (newType === 'double' ? spikeWidth * 2 : spikeWidth);
+      const dist = Math.abs(existingX - newX);
+
+      if (dist < 180) {
+        if (dist <= existingWidth) {
+          if (newType === 'triple' || spike.type === 'triple') return false;
+          if (newType === 'double' && spike.type === 'double') return false;
+          if ((newType === 'double' && spike.type === 'single') || (newType === 'single' && spike.type === 'double')) return false;
+          if (newType === 'single' && spike.type === 'single') return false;
+        } else {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // Build spikes for default levels based on counts
+  function buildLevelSpikes(level) {
+    const spikes = [];
+    const speed = level.speed;
+    const maxTime = level.lengthSec - 1;
+
+    // Place singles
+    let singles = 0;
+    let time = 1.5;
+    while (singles < level.spikeCounts.single && time < maxTime) {
+      if (isSpacingValid(spikes, time, 'single', speed)) {
+        spikes.push({time, type: 'single'});
+        singles++;
+        time += 2.5;
+      } else {
+        time += 0.1;
+      }
+    }
+
+    // Place doubles
+    let doubles = 0;
+    time = 4;
+    while (doubles < level.spikeCounts.double && time < maxTime) {
+      if (isSpacingValid(spikes, time, 'double', speed)) {
+        spikes.push({time, type: 'double'});
+        doubles++;
+        time += 3.5;
+      } else {
+        time += 0.1;
+      }
+    }
+
+    // Place triples if allowed
+    if (level.allowTriple) {
+      let triples = 0;
+      time = 8;
+      while (triples < (level.spikeCounts.triple || 0) && time < maxTime) {
+        if (isSpacingValid(spikes, time, 'triple', speed)) {
+          spikes.push({time, type: 'triple'});
+          triples++;
+          time += 4;
+        } else {
+          time += 0.1;
+        }
+      }
+    }
+    spikes.sort((a,b) => a.time - b.time);
+    return spikes;
+  }
+
+  // Assign spikes to all default levels
+  levels.forEach(lvl => lvl.spikes = buildLevelSpikes(lvl));
+
+  const player = {
+    x: 50,
+    y: 0,
+    width: 30,
+    height: 30,
+    yVelocity: 0,
+    gravity: 0.8,
+    jumpStrength: -14,
+    grounded: false,
+  };
+
+  let currentLevelIndex = 0;
+  let frames = 0;
+  let maxFrames = 0;
+  let gameRunning = false;
+  let gameOver = false;
+  let win = false;
+
+  // Custom level state
+  let customLevel = {
+    name: '',
+    speed: 5,
+    lengthSec: 20,
+    spikes: [],
+    bgColor: '#005577'
+  };
+
+  let playingCustom = false;
+
+  function loadProgress() {
+    const data = localStorage.getItem(storageKey);
+    if (data) {
+      completedLevels = JSON.parse(data);
+    }
+  }
+  function saveProgress() {
+    localStorage.setItem(storageKey, JSON.stringify(completedLevels));
+  }
+
+  // Build level select buttons
+  function buildLevelButtons() {
+    levelSelectDiv.innerHTML = '';
+    levels.forEach((lvl, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'levelBtn';
+      btn.textContent = lvl.name;
+      btn.dataset.level = idx;
+      levelSelectDiv.appendChild(btn);
+      btn.addEventListener('click', () => {
+        if(gameRunning) return;
+        playingCustom = false;
+        currentLevelIndex = idx;
+        updateLevelButtons();
+        messageEl.textContent = "Tap or click the canvas to jump. Avoid the spikes!";
+        progressEl.textContent = '0% Completed';
+        resetBtn.style.display = 'none';
+        updateBackground();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawGround();
+        player.y = groundY - player.height;
+        drawPlayer();
+      });
+    });
+
+    // Add a button to select custom level play
+    const customBtn = document.createElement('button');
+    customBtn.className = 'levelBtn';
+    customBtn.textContent = 'Your Custom Level';
+    customBtn.style.background = '#ff7f50';
+    customBtn.style.color = '#222';
+    customBtn.dataset.level = 'custom';
+    levelSelectDiv.appendChild(customBtn);
+    customBtn.addEventListener('click', () => {
+      if(gameRunning) return;
+      playingCustom = true;
+      messageEl.textContent = "Tap or click the canvas to jump. Avoid the spikes!";
+      progressEl.textContent = '0% Completed';
+      resetBtn.style.display = 'none';
+      updateBackgroundCustom();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawGround();
+      player.y = groundY - player.height;
+      drawPlayer();
+    });
+  }
+
+  function updateLevelButtons() {
+    [...levelSelectDiv.children].forEach(btn => {
+      if(playingCustom) {
+        btn.classList.toggle('selected', btn.dataset.level === 'custom');
+      } else {
+        const idx = parseInt(btn.dataset.level);
+        btn.classList.toggle('selected', idx === currentLevelIndex);
+      }
+
+      if(!playingCustom && completedLevels[btn.dataset.level]) {
+        if (!btn.querySelector('.checkmark')) {
+          const check = document.createElement('span');
+          check.className = 'checkmark';
+          check.textContent = '✓';
+          btn.appendChild(check);
+        }
+      } else {
+        const existingCheck = btn.querySelector('.checkmark');
+        if (existingCheck) existingCheck.remove();
+      }
+    });
+  }
+
+  function updateBackground() {
+    canvas.style.background = levels[currentLevelIndex].bgColor;
+    groundY = canvas.height - 40;
+  }
+  function updateBackgroundCustom() {
+    canvas.style.background = customLevel.bgColor;
+    groundY = canvas.height - 40;
+  }
+
+  function drawGround() {
+    ctx.fillStyle = '#333';
+    ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+  }
+
+  function drawPlayer() {
+    ctx.fillStyle = '#50e3c2';
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+  }
+
+  function drawSpikeShape(x, y, width, height) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + width/2, y - height);
+    ctx.lineTo(x + width, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawSpikes(offsetX, spikes, speed) {
+    ctx.fillStyle = '#e94e4e';
+    spikes.forEach(spike => {
+      const spikeX = spike.time * speed * 60;
+      let screenX = spikeX - offsetX;
+      let widthSpike, countSpikes;
+      if(spike.type === 'single') {
+        widthSpike = spikeWidth;
+        countSpikes = 1;
+      } else if(spike.type === 'double') {
+        widthSpike = spikeWidth * 2;
+        countSpikes = 2;
+      } else { // triple
+        widthSpike = spikeWidth * 3;
+        countSpikes = 3;
+      }
+      if (screenX + widthSpike > 0 && screenX < canvas.width) {
+        for(let i=0; i<countSpikes; i++) {
+          drawSpikeShape(screenX + i*spikeWidth, groundY, spikeWidth, spikeHeight);
+        }
+      }
+    });
+  }
+
+  function checkCollision(offsetX, spikes, speed) {
+    const px = player.x;
+    const py = player.y;
+    const pw = player.width;
+    const ph = player.height;
+
+    for (const spike of spikes) {
+      const spikeX = spike.time * speed * 60;
+      let widthSpike = spikeWidth * (spike.type === 'triple' ? 3 : (spike.type === 'double' ? 2 : 1));
+      const spikeY = groundY - spikeHeight;
+
+      if (
+        px < spikeX - offsetX + widthSpike &&
+        px + pw > spikeX - offsetX &&
+        py + ph > spikeY
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function resetGame() {
+    frames = 0;
+    if(playingCustom){
+      maxFrames = Math.floor(customLevel.lengthSec * 60);
+    } else {
+      maxFrames = Math.floor(levels[currentLevelIndex].lengthSec * 60);
+    }
+    player.y = groundY - player.height;
+    player.yVelocity = 0;
+    player.grounded = true;
+    gameRunning = true;
+    gameOver = false;
+    win = false;
+    messageEl.textContent = '';
+    progressEl.textContent = '0% Completed';
+    resetBtn.style.display = 'inline-block';
+    if(playingCustom){
+      updateBackgroundCustom();
+    } else {
+      updateBackground();
+    }
+    draw();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGround();
+    drawPlayer();
+  }
+
+  function gameLoop() {
+    if (!gameRunning) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let offsetX, spikes, speed;
+    if(playingCustom){
+      offsetX = frames * customLevel.speed;
+      spikes = customLevel.spikes;
+      speed = customLevel.speed;
+    } else {
+      offsetX = frames * levels[currentLevelIndex].speed;
+      spikes = levels[currentLevelIndex].spikes;
+      speed = levels[currentLevelIndex].speed;
+    }
+
+    player.yVelocity += player.gravity;
+    player.y += player.yVelocity;
+
+    if (player.y + player.height >= groundY) {
+      player.y = groundY - player.height;
+      player.yVelocity = 0;
+      player.grounded = true;
+    } else {
+      player.grounded = false;
+    }
+
+    drawGround();
+    drawSpikes(offsetX, spikes, speed);
+    drawPlayer();
+
+    let percent = Math.min(100, Math.floor((frames / maxFrames) * 100));
+    progressEl.textContent = percent + '% Completed';
+
+    if (checkCollision(offsetX, spikes, speed)) {
+      gameOver = true;
+      gameRunning = false;
+      messageEl.textContent = "💥 You hit a spike! Tap Play to try again.";
+      resetBtn.style.display = 'none';
+      progressEl.textContent = '';
+      return;
+    }
+
+    frames++;
+
+    if (frames > maxFrames) {
+      gameRunning = false;
+      win = true;
+      messageEl.textContent = playingCustom ? "🎉 Custom Level Complete! Tap Play to replay." : "🎉 Level Complete! Tap Play to replay.";
+      resetBtn.style.display = 'none';
+      progressEl.textContent = '100% Completed';
+
+      if(!playingCustom){
+        completedLevels[currentLevelIndex] = true;
+        saveProgress();
+        updateLevelButtons();
+      }
+      return;
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  function jump() {
+    if (gameRunning && player.grounded) {
+      player.yVelocity = player.jumpStrength;
+      player.grounded = false;
+    }
+  }
+
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    jump();
+  }, { passive: false });
+
+  canvas.addEventListener('mousedown', e => {
+    e.preventDefault();
+    jump();
+  });
+
+  playBtn.addEventListener('click', () => {
+    resetGame();
+    gameLoop();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    resetGame();
+    gameLoop();
+    messageEl.textContent = '';
+    progressEl.textContent = '0% Completed';
+  });
+
+  buildLevelButtons();
+  loadProgress();
+  updateLevelButtons();
+  updateBackground();
+  drawGround();
+  player.y = groundY - player.height;
+  drawPlayer();
+  messageEl.textContent = "Tap or click the canvas to jump. Avoid the spikes!";
+
+  // --------------- Level Creator Logic ---------------
+
+  // Render the spike list in creator UI
+  function renderSpikeList() {
+    spikeList.innerHTML = '';
+    if (customLevel.spikes.length === 0) {
+      spikeList.textContent = 'No spikes added yet.';
+      return;
+    }
+    customLevel.spikes.sort((a,b) => a.time - b.time);
+    customLevel.spikes.forEach((spike, idx) => {
+      const div = document.createElement('div');
+      div.textContent = `Time: ${spike.time.toFixed(1)}s | Type: ${spike.type.charAt(0).toUpperCase() + spike.type.slice(1)}`;
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '×';
+      delBtn.title = 'Delete Spike';
+      delBtn.addEventListener('click', () => {
+        customLevel.spikes.splice(idx, 1);
+        renderSpikeList();
+      });
+      div.appendChild(delBtn);
+      spikeList.appendChild(div);
+    });
+  }
+
+  function showCreatorMessage(text, error = false) {
+    creatorMessage.textContent = text;
+    creatorMessage.style.color = error ? '#f44' : '#50e3c2';
+    setTimeout(() => {
+      if (creatorMessage.textContent === text) {
+        creatorMessage.textContent = '';
+      }
+    }, 3000);
+  }
+
+  addSpikeBtn.addEventListener('click', () => {
+    let time = parseFloat(customSpikeTime.value);
+    let type = customSpikeType.value;
+
+    if (isNaN(time) || time < 0 || time > (customLengthInput.value - 1)) {
+      showCreatorMessage('Spike time must be between 0 and (length-1) seconds', true);
+      return;
+    }
+
+    if (type === 'triple' && customSpeedInput.value < 3) {
+      showCreatorMessage('Use speed 3 or higher for triple spikes', true);
+      return;
+    }
+
+    // Check spacing against existing spikes
+    if (!isSpacingValid(customLevel.spikes, time, type, customSpeedInput.value)) {
+      showCreatorMessage('Spike too close to existing spike! Min spacing 180px.', true);
+      return;
+    }
+
+    // Add spike
+    customLevel.spikes.push({ time, type });
+    renderSpikeList();
+  });
+
+  saveLevelBtn.addEventListener('click', () => {
+    const name = customLevelName.value.trim();
+    if (name.length === 0) {
+      showCreatorMessage('Please enter a level name', true);
+      return;
+    }
+    if (customLevel.spikes.length === 0) {
+      showCreatorMessage('Add at least one spike', true);
+      return;
+    }
+    let speed = parseFloat(customSpeedInput.value);
+    let length = parseInt(customLengthInput.value);
+
+    if (speed < 1 || speed > 15 || length < 10 || length > 60) {
+      showCreatorMessage('Speed must be 1-15 and length 10-60 seconds', true);
+      return;
+    }
+
+    customLevel.name = name;
+    customLevel.speed = speed;
+    customLevel.lengthSec = length;
+
+    localStorage.setItem(customLevelStorageKey, JSON.stringify(customLevel));
+    showCreatorMessage('Level saved successfully!');
+  });
+
+  loadLevelBtn.addEventListener('click', () => {
+    const saved = localStorage.getItem(customLevelStorageKey);
+    if (!saved) {
+      showCreatorMessage('No saved custom level found', true);
+      return;
+    }
+    try {
+      const loaded = JSON.parse(saved);
+      customLevel = loaded;
+      customLevelName.value = customLevel.name;
+      customSpeedInput.value = customLevel.speed;
+      customLengthInput.value = customLevel.lengthSec;
+      renderSpikeList();
+      showCreatorMessage('Custom level loaded!');
+    } catch {
+      showCreatorMessage('Failed to load custom level', true);
+    }
+  });
+
+  deleteLevelBtn.addEventListener('click', () => {
+    localStorage.removeItem(customLevelStorageKey);
+    customLevel = {name: '', speed:5, lengthSec: 20, spikes: [], bgColor: '#005577'};
+    customLevelName.value = '';
+    customSpeedInput.value = 5;
+    customLengthInput.value = 20;
+    renderSpikeList();
+    showCreatorMessage('Custom level deleted');
+  });
+
+  playCustomBtn.addEventListener('click', () => {
+    if (gameRunning) return;
+    if (customLevel.spikes.length === 0) {
+      showCreatorMessage('Add at least one spike to play custom level', true);
+      return;
+    }
+    playingCustom = true;
+    messageEl.textContent = "Tap or click the canvas to jump. Avoid the spikes!";
+    progressEl.textContent = '0% Completed';
+    resetBtn.style.display = 'none';
+    updateBackgroundCustom();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGround();
+    player.y = groundY - player.height;
+    drawPlayer();
+    resetGame();
+    gameLoop();
+    updateLevelButtons();
+  });
+
+  renderSpikeList();
+
+})();
+</script>
+
+</body>
+</html>
